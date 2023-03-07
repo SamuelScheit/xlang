@@ -1,55 +1,4 @@
-export enum TokenType {
-	EOF,
-	// equality
-	BANG,
-	BANG_EQUAL,
-	EQUAL,
-	EQUAL_EQUAL,
-	GREATER,
-	GREATER_EQUAL,
-	LESS,
-	LESS_EQUAL,
-
-	// Literals.
-	IDENTIFIER,
-	STRING,
-	NUMBER,
-
-	// Keywords.
-	AND,
-	CLASS,
-	ELSE,
-	FALSE,
-	FOR,
-	IF,
-	NULL,
-	OR,
-	RETURN,
-	SUPER,
-	THIS,
-	TRUE,
-	VAR,
-	WHILE,
-	MOD,
-
-	// Single-character tokens.
-	LEFT_PAREN,
-	RIGHT_PAREN,
-	LEFT_BRACE,
-	RIGHT_BRACE,
-	COMMA,
-	DOT,
-	MINUS,
-	PLUS,
-	SEMICOLON,
-	SLASH,
-	STAR,
-	FUN,
-}
-
-export class Token {
-	constructor(public type: TokenType, public lexeme: string, public literal: any, public line: number, public column: number) {}
-}
+import { Token, TokenType } from "./types";
 
 export class Lexer {
 	private current: number = 0;
@@ -66,7 +15,7 @@ export class Lexer {
 			this.scanToken();
 		}
 
-		this.tokens.push(new Token(TokenType.EOF, "", null, this.line, this.column));
+		this.tokens.push({ type: TokenType.EOF, lexeme: "", literal: null, line: this.line, column: this.column });
 		return this.tokens;
 	}
 
@@ -74,50 +23,42 @@ export class Lexer {
 		const c = this.advance();
 		switch (c) {
 			case "(":
-				this.addToken(TokenType.LEFT_PAREN);
-				break;
+				return this.addToken(TokenType.LEFT_PAREN);
 			case ")":
-				this.addToken(TokenType.RIGHT_PAREN);
-				break;
+				return this.addToken(TokenType.RIGHT_PAREN);
 			case "{":
-				this.addToken(TokenType.LEFT_BRACE);
-				break;
+				return this.addToken(TokenType.LEFT_BRACE);
 			case "}":
-				this.addToken(TokenType.RIGHT_BRACE);
-				break;
+				return this.addToken(TokenType.RIGHT_BRACE);
 			case ",":
-				this.addToken(TokenType.COMMA);
-				break;
+				return this.addToken(TokenType.COMMA);
 			case ".":
-				this.addToken(TokenType.DOT);
-				break;
+				return this.addToken(TokenType.DOT);
 			case "-":
-				this.addToken(TokenType.MINUS);
-				break;
+				if (this.match("-")) return this.addToken(TokenType.DECREMENT);
+				return this.addToken(TokenType.MINUS);
 			case "+":
-				this.addToken(TokenType.PLUS);
-				break;
+				if (this.match("+")) return this.addToken(TokenType.INCREMENT);
+				return this.addToken(TokenType.PLUS);
 			case ";":
-				this.addToken(TokenType.SEMICOLON);
-				break;
+				return this.addToken(TokenType.SEMICOLON);
 			case "*":
-				this.addToken(TokenType.STAR);
-				break;
+				return this.addToken(TokenType.STAR);
 			case "%":
-				this.addToken(TokenType.MOD);
-				break;
+				return this.addToken(TokenType.MOD);
 			case "!":
-				this.addToken(this.match("=") ? TokenType.BANG_EQUAL : TokenType.BANG);
-				break;
+				return this.addToken(this.match("=") ? TokenType.BANG_EQUAL : TokenType.BANG);
 			case "=":
-				this.addToken(this.match("=") ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
-				break;
+				if (this.match(">")) {
+					this.addToken(TokenType.ARROW);
+				} else {
+					this.addToken(this.match("=") ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
+				}
+				return;
 			case "<":
-				this.addToken(this.match("=") ? TokenType.LESS_EQUAL : TokenType.LESS);
-				break;
+				return this.addToken(this.match("=") ? TokenType.LESS_EQUAL : TokenType.LESS);
 			case ">":
-				this.addToken(this.match("=") ? TokenType.GREATER_EQUAL : TokenType.GREATER);
-				break;
+				return this.addToken(this.match("=") ? TokenType.GREATER_EQUAL : TokenType.GREATER);
 			case "/":
 				if (this.match("/")) {
 					// A comment goes until the end of the line.
@@ -125,19 +66,16 @@ export class Lexer {
 				} else {
 					this.addToken(TokenType.SLASH);
 				}
-				break;
+				return;
 			case " ":
 			case "\r":
 			case "\t":
-				// Ignore whitespace.
-				break;
+				return; // Ignore whitespace.
 			case "\n":
 				this.line++;
-				this.column = 1;
-				break;
+				return (this.column = 1);
 			case '"':
-				this.string();
-				break;
+				return this.string();
 			default:
 				if (this.isDigit(c)) {
 					this.number();
@@ -146,7 +84,6 @@ export class Lexer {
 				} else {
 					throw new Error(`Unexpected character at line ${this.line} and column ${this.column}`);
 				}
-				break;
 		}
 	}
 
@@ -234,6 +171,12 @@ export class Lexer {
 
 	private addToken(type: TokenType, literal?: any) {
 		const text = this.source.substring(this.start, this.current);
-		this.tokens.push(new Token(type, text, literal, this.line, this.column));
+		this.tokens.push({
+			type,
+			lexeme: text,
+			literal,
+			line: this.line,
+			column: this.column,
+		});
 	}
 }
