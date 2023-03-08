@@ -9,7 +9,6 @@ import {
 	GroupingExpression,
 	IfStatement,
 	LiteralExpression,
-	LogicalExpression,
 	ReturnStatement,
 	Token,
 	TokenType,
@@ -37,27 +36,13 @@ export class AST {
 	}
 
 	private statement() {
-		if (this.match(TokenType.VAR)) {
-			return this.declaration();
-		}
-		if (this.match(TokenType.IF)) {
-			return this.ifStatement();
-		}
-		if (this.match(TokenType.WHILE)) {
-			return this.whileStatement();
-		}
-		if (this.match(TokenType.FOR)) {
-			return this.forStatement();
-		}
-		if (this.match(TokenType.RETURN)) {
-			return this.returnStatement();
-		}
-		if (this.match(TokenType.LEFT_BRACE)) {
-			return this.blockStatement();
-		}
-		if (this.match(TokenType.FUN)) {
-			return this.functionStatement();
-		}
+		if (this.match(TokenType.VAR)) return this.declaration();
+		if (this.match(TokenType.IF)) return this.ifStatement();
+		if (this.match(TokenType.WHILE)) return this.whileStatement();
+		if (this.match(TokenType.FOR)) return this.forStatement();
+		if (this.match(TokenType.RETURN)) return this.returnStatement();
+		if (this.match(TokenType.LEFT_BRACE)) return this.blockStatement();
+		if (this.match(TokenType.FUN)) return this.functionStatement();
 		return this.expressionStatement();
 	}
 
@@ -65,12 +50,8 @@ export class AST {
 		if (this.match(TokenType.FALSE)) return { type: "literal", value: false } as LiteralExpression;
 		if (this.match(TokenType.TRUE)) return { type: "literal", value: true } as LiteralExpression;
 		if (this.match(TokenType.NULL)) return { type: "literal", value: null } as LiteralExpression;
-		if (this.match(TokenType.NUMBER, TokenType.STRING)) {
-			return { type: "literal", value: this.previous().literal } as LiteralExpression;
-		}
-		if (this.match(TokenType.IDENTIFIER)) {
-			return { type: "identifier", name: this.previous() } as IdentifierExpression;
-		}
+		if (this.match(TokenType.NUMBER, TokenType.STRING)) return { type: "literal", value: this.previous().literal } as LiteralExpression;
+		if (this.match(TokenType.IDENTIFIER)) return { type: "identifier", name: this.previous() } as IdentifierExpression;
 		if (this.match(TokenType.LEFT_PAREN)) {
 			const expression = this.expression();
 			this.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.");
@@ -187,7 +168,7 @@ export class AST {
 
 		let increment = null;
 		if (!this.check(TokenType.RIGHT_PAREN)) {
-			increment = this.expression();
+			increment = this.expressionStatement();
 		}
 		this.consume(TokenType.RIGHT_PAREN, "Expected ')' after for clauses.");
 
@@ -225,20 +206,21 @@ export class AST {
 		return { type: "return", keyword, value };
 	}
 
-	private blockStatement() {
+	private blockStatement(): BlockStatement {
 		const statements = [];
 
 		while (!this.check(TokenType.RIGHT_BRACE) && !this.isAtEnd()) {
-			statements.push(this.expressionStatement());
+			statements.push(this.statement());
 		}
 
 		this.consume(TokenType.RIGHT_BRACE, "Expected '}' after block.");
-		return { type: "block", statements } as BlockStatement;
+		return { type: "block", statements };
 	}
 
 	private expressionStatement(): ExpressionStatement {
 		const expression = this.expression();
-		this.consume(TokenType.SEMICOLON, "Expected ';' after expression.");
+		// this.consume(TokenType.SEMICOLON, "Expected ';' after expression.");
+		this.match(TokenType.SEMICOLON); // allow semicolons to be optional
 		return { type: "expression", expression };
 	}
 
@@ -264,7 +246,7 @@ export class AST {
 		while (this.match(TokenType.OR)) {
 			const operator = this.previous();
 			const right = this.and();
-			expression = { type: "logical", operator, left: expression, right } as LogicalExpression;
+			expression = { type: "binary", operator, left: expression, right } as BinaryExpression;
 		}
 		return expression;
 	}
@@ -274,7 +256,7 @@ export class AST {
 		while (this.match(TokenType.AND)) {
 			const operator = this.previous();
 			const right = this.equality();
-			expression = { type: "logical", operator, left: expression, right } as LogicalExpression;
+			expression = { type: "binary", operator, left: expression, right } as BinaryExpression;
 		}
 		return expression;
 	}
@@ -310,26 +292,17 @@ export class AST {
 	}
 
 	private factor(): Expression {
-		let expression = this.preUnary();
+		let expression = this.unary();
 		while (this.match(TokenType.STAR, TokenType.SLASH, TokenType.MOD)) {
 			const operator = this.previous();
-			const right = this.preUnary();
+			const right = this.unary();
 			expression = { type: "binary", operator, left: expression, right } as BinaryExpression;
 		}
 		return expression;
 	}
 
-	private preUnary(): Expression {
-		const right = this.primary();
-		if (this.match(TokenType.INCREMENT, TokenType.DECREMENT)) {
-			const operator = this.previous();
-			return { type: "unary", operator, right } as UnaryExpression;
-		}
-		return this.unary();
-	}
-
 	private unary(): Expression {
-		if (this.match(TokenType.BANG, TokenType.MINUS, TokenType.PLUS, TokenType.INCREMENT, TokenType.DECREMENT)) {
+		if (this.match(TokenType.BANG, TokenType.MINUS, TokenType.PLUS)) {
 			const operator = this.previous();
 			const right = this.unary();
 			return { type: "unary", operator, right } as UnaryExpression;

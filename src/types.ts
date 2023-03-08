@@ -5,7 +5,6 @@ export type Expression =
 	| GroupingExpression
 	| IdentifierExpression
 	| AssignmentExpression
-	| LogicalExpression
 	| CallExpression
 	| FunctionExpression;
 
@@ -41,13 +40,6 @@ export interface AssignmentExpression {
 	name: Token;
 	value: Expression;
 	type: "assignment";
-}
-
-export interface LogicalExpression {
-	left: Expression;
-	operator: Token;
-	right: Expression;
-	type: "logical";
 }
 
 export interface CallExpression {
@@ -95,7 +87,7 @@ export interface WhileStatement {
 export interface ForStatement {
 	initializer: VariableStatement | ExpressionStatement | null;
 	condition: Expression | null;
-	increment: Expression | null;
+	increment: ExpressionStatement | null;
 	body: Statement;
 	type: "for";
 }
@@ -177,8 +169,4 @@ export enum TokenType {
 	SEMICOLON,
 	SLASH,
 	STAR,
-
-	//
-	INCREMENT,
-	DECREMENT,
 }

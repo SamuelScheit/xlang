@@ -35,10 +35,8 @@ export class Lexer {
 			case ".":
 				return this.addToken(TokenType.DOT);
 			case "-":
-				if (this.match("-")) return this.addToken(TokenType.DECREMENT);
 				return this.addToken(TokenType.MINUS);
 			case "+":
-				if (this.match("+")) return this.addToken(TokenType.INCREMENT);
 				return this.addToken(TokenType.PLUS);
 			case ";":
 				return this.addToken(TokenType.SEMICOLON);
